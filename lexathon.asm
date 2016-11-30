@@ -21,17 +21,55 @@ alreadyMatched: .space 200
 #####################################################################################
 intro: .asciiz "\nSalman Ahmad, Evan Remmele, Alec Salas, and Thomas Sowders present: \n\n\t\t\tL E X A T H O N ! ! !\n\n"
 .text
+
+#### You guys can delete this if you want, I added some intro sound ###
+li $v0, 33 #MIDI out, synchronous
+li $a0, 60  #pitch
+li $a1, 333 #duration
+li $a2, 17  #instrument
+li $a3, 100 #volume
+syscall
+
+li $v0, 31  
+li $a0, 48
+li $a1, 1666
+syscall
+li $v0, 32 #sleep
+li $a0, 333
+syscall
+
+li $v0, 31
+li $a0, 60
+li $a1, 333
+syscall
+li $v0, 32
+li $a0, 333
+syscall
+
+li $v0, 31
+li $a0, 67
+li $a1, 1000
+syscall
+### Deletable section ###
+
 li $t0, -1  # initial index of char (before incrementing)
 introLoop:
 li $v0, 32  # syscall for sleep
-li $a0, 75 # wait 100 ms
+li $a0, 75 # wait 75 ms
 syscall
 li $v0, 11  # syscall for print char
 addi $t0, $t0, 1 # increase index of char
 lb $a0, intro($t0) # load char from string
 syscall # print char
 bne $t0, 96, introLoop # keep looping until string is exhausted
-#####################################################################################
+
+#reset registers... seemed not to work without this
+li $v0, 0
+li $a0, 0
+li $a1, 0									#
+li $a2, 0									#
+li $a3, 0									#
+#################################################################################
 
 #####
 #
@@ -40,25 +78,25 @@ bne $t0, 96, introLoop # keep looping until string is exhausted
 #####
 opennines: #Prepare to open the nines file. (The file that contains the nine-letter words)
 li $v0, 13
-la $a0 ninesfilename
-li $a2 0 #read only
+la $a0, ninesfilename
+li $a2, 0 #read only
 syscall #Open nines file
-sw $v0 ninesfiledescriptor
+sw $v0, ninesfiledescriptor
 
 openwords: #Prepare to open the words file. (All english words)
 li $v0, 13
-la $a0 wordsfilename
-li $a2 0 #read only
+la $a0, wordsfilename
+li $a2, 0 #read only
 syscall #OpenWords File
-sw $v0 wordsfiledescriptor
+sw $v0, wordsfiledescriptor
 
 li $v0, 9
 li $a0, 100000
 syscall #Allocate buffer memory for nines file
-sw $v0 ninesbufferstart
+sw $v0, ninesbufferstart
 
 readNines: #loads the file contents into the buffer
-li $v0 14
+li $v0, 14
 lw $a0, ninesfiledescriptor
 lw $a1, ninesbufferstart
 li $a2, 100000
@@ -78,7 +116,7 @@ syscall #Allocate buffer memory for words file
 sw $v0 wordsbufferstart
 
 readWords: #loads the file contents into the buffer
-li $v0 14
+li $v0, 14
 lw $a0, wordsfiledescriptor
 lw $a1, wordsbufferstart
 li $a2, 400000
@@ -92,7 +130,7 @@ sw $v0 sizeofwordsfile
 selectKeyword:
  ##TODO: SELECT A RANDOM NUMBER FOR $t0, the line number. 
 li $v0, 42
-xor $a0, $a0, $a0
+li $a0, 0
 lw $a1, sizeofninesfile
 divu $a1, $a1, 10
 syscall # Will throw an error if sizeofninesfile = -1 (caused if nines.txt is not read properly or not in folder)
@@ -255,7 +293,7 @@ inputbufferstart: .word 0
 .text
 listchecker:
 
-printWelcomeMessage:
+Message:
 #TODO: Print a welcome message
 
 #jal printSolutions
