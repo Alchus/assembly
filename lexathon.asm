@@ -16,8 +16,28 @@ matchesFound: .word 0 #counts by 10
 matches: .space 20000
 alreadyMatched: .space 200
 
+#####################################################################################
+# INTRO SECTION (so user can see a welcome message while waiting for game to load!) #
+#####################################################################################
+intro: .asciiz "\nSalman Ahmad, Evan Remmele, Alec Salas, and Thomas Sowders present: \n\n\t\t\tL E X A T H O N ! ! !\n\n"
 .text
+li $t0, -1  # initial index of char (before incrementing)
+introLoop:
+li $v0, 32  # syscall for sleep
+li $a0, 75 # wait 100 ms
+syscall
+li $v0, 11  # syscall for print char
+addi $t0, $t0, 1 # increase index of char
+lb $a0, intro($t0) # load char from string
+syscall # print char
+bne $t0, 96, introLoop # keep looping until string is exhausted
+#####################################################################################
 
+#####
+#
+#   BEGIN LOADING FILES
+#
+#####
 opennines: #Prepare to open the nines file. (The file that contains the nine-letter words)
 li $v0, 13
 la $a0 ninesfilename
@@ -65,8 +85,9 @@ li $a2, 400000
 syscall #loads the words file contents into the buffer
 sw $v0 sizeofwordsfile
 
-
-
+###
+# SELECT A RANDOM KEYWORD
+###
 #Store the chosen nine letter word into keyword
 selectKeyword:
  ##TODO: SELECT A RANDOM NUMBER FOR $t0, the line number. 
@@ -98,6 +119,12 @@ lbu $t1, keyword+4
 sb $t0, keyword+4
 sb $t1, keyword($a0)
 
+
+#####
+#
+#   CREATE MATCHES LIST
+#
+#####
 
 #the following section scans the list of English words to determine which of them can
 # be made as anagrams of the chosen keyword (the nine-letter word).
@@ -179,22 +206,13 @@ move $t2, $s0
 add $t2, $t2, $s1
 add $t2, $t2, $t0
 lbu $t2, ($t2)
-## was testing to see which characters were being compared
-#li $v0, 11
-#add $a0, $zero, $t2
-#syscall
-#add $a0, $zero, $t1
-#syscall
 xor $t3, $t1, $t2
 beq $t3, 0, validWord
 addi $t0, $t0, 1
 bne $t0, 9, matchloop
 j nextline
+
 validWord:
-
-
-
-nop #  MATCH FOUND
 #Copy the matched line into the matches buffer
 li $t9, 0 # Loop Counter
 copyloop:
@@ -240,7 +258,7 @@ listchecker:
 printWelcomeMessage:
 #TODO: Print a welcome message
 
-jal printSolutions
+#jal printSolutions
 #FOR DEBUG ONLY.
 #TODO: REMOVE THIS LINE BEFORE SUBMISSION
 
@@ -297,6 +315,7 @@ j _char
 #Skip incrementing before the first char of each line
 next_char: addi $t1, $t1, 1 #increment character index
 _char: #check one char at a time
+
 slti $t3, $t1, 10 #are we at the end of line?
 beqz $t3 next_line #if so, continue outer loop (move to the next line)
 
@@ -306,9 +325,16 @@ add $t6, $t6, $t1 #address of input char
 lbu $s0, ($t6) #input char is now in s0
 
 checkEscape:
+bne $s0, 47, continueMatching
+lbu $s0, 1($t6)
+beq $s0, 83, shuffle
+beq $s0, 115, shuffle
+beq $s0, 81, quit
+beq $s0, 113, quit
 #TODO: Check if we have an excape character sequence.
 #If we do, jump to "escapeFound"
 
+continueMatching:
 move $s1, $0
 la $t6, matches
 add $t6, $t6, $t0 #ref line offset
@@ -333,19 +359,13 @@ bne $s0, $s1 next_line
 #####################################################
 
 inList:
+# Checks and records if a word has already been found or not. 
+# If it has already been found, prints according message.
 divu $t0, $t0, 10
 li $t1, 1
 lb $t2, alreadyMatched($t0)
 bnez $t2, alreadyFound
 sb $t1, alreadyMatched($t0)
-
-
-#TODO: Save the fact that the word has been matched, and check if we've already used it.
-#The line number of the succesful match is located in $t0 when this code is called
-#e.g. if the user imput matched first line of the possible solutions, the value of $t0 would be 0.
-# If the user matched the second possible solution, the value of $t0 would be ten. (And so on, counting by ten.)
-
-
 
 li $v0 4
 la $a0, successmessage
@@ -359,21 +379,17 @@ la $a0,alreadyfoundmessage
 syscall
 j getinput
 
-
 notInList:
 li $v0 4
 la $a0, failmessage
 syscall
 j getinput
 
-escapeFound:
-#TODO: Modify the code near _char to jump and link here when the first character of a line is '/'
-#TODO: Determine which escape sequence was found (or an invalid one), then jump to "shuffle" or "quit".
 
 shuffle:
-#TODO: shuffle Puzzle
-# The letters of the puzzle are found in the buffer labeled "keyword"
-li $t4, 0
+# Appropriately shuffles all characters except middle character.
+# Randomly swaps characters in the keystring, x times. 
+li $t4, 0 # swap counter
 li $a0, 0
 li $a1, 8
 li $v0, 42
@@ -390,7 +406,7 @@ lb $t3, keystring($t1)
 sb $t2, keystring($t1)
 sb $t3, keystring($t0)
 addi $t4, $t4, 1
-bne $t4, 10, notFour1
+bne $t4, 10, notFour1 # adjust this line to adjust # of swaps (currently 10)
 
 j displayPuzzle
 
