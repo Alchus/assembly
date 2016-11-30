@@ -14,6 +14,7 @@ keystring: .asciiz "X X X\nX X X\nX X X\n"
 
 matchesFound: .word 0 #counts by 10
 matches: .space 20000
+alreadymatchedstore: .space 200
 
 .text
 
@@ -227,6 +228,8 @@ j listchecker
 filename: .asciiz "words.txt"
 successmessage: .asciiz " Word is in puzzle\n"
 failmessage: .asciiz " Word is not in puzzle\n"
+alreadyUsedMessage: .asciiz " Word has already been used\n"
+
 
 inputbufferstart: .word 0
 
@@ -330,10 +333,24 @@ bne $s0, $s1 next_line
 #####################################################
 
 inList:
+
+#loop over alreadymatchedstore to check if line has been matched previously
+li $t7,0
+li $t8,200
+loopit:
+lb $t5, alreadymatchedstore($t7)
+beq $t5,$t0,alreadyUsed
+beq $t7,$t8,addToStore #if not add the word to the store
+addi $t7,$t7,1
+j loopit
+addToStore:
+sw $t0,alreadymatchedstore
+
 #TODO: Save the fact that the word has been matched, and check if we've already used it.
 #The line number of the succesful match is located in $t0 when this code is called
 #e.g. if the user imput matched first line of the possible solutions, the value of $t0 would be 0.
 # If the user matched the second possible solution, the value of $t0 would be ten. (And so on, counting by ten.)
+
 
 
 li $v0 4
@@ -341,10 +358,22 @@ la $a0, successmessage
 syscall #print the success message.
 j getinput #return to the input loop
 
+#added "already used word" message - Salman
+alreadyUsed:
+li $v0,4
+la $a0,alreadyUsedMessage
+syscall
+
+j afterMessage
+
+
+
 notInList:
 li $v0 4
 la $a0, failmessage
 syscall
+
+afterMessage:
 
 #j getinput
 j shuffle
