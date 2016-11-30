@@ -226,9 +226,9 @@ j listchecker
 #################################################################################
 .data
 filename: .asciiz "words.txt"
-successmessage: .asciiz " Word is in puzzle\n"
-failmessage: .asciiz " Word is not in puzzle\n"
-alreadyUsedMessage: .asciiz " Word has already been used\n"
+successmessage: .asciiz " Word is in puzzle!\n"
+failmessage: .asciiz " Word is not in puzzle.\n"
+alreadyUsedMessage: .asciiz " Word already found!\n"
 
 
 inputbufferstart: .word 0
