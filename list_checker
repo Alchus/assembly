@@ -1,0 +1,126 @@
+openfile: #Prepare to open the solution file.
+li $v0, 13
+la $a0 filename
+li $a2 0 #read only
+syscall
+sw $v0 filedescriptor
+
+#Allocate buffer memory for solution file
+li $v0, 9
+li $a0, 1000
+syscall
+sw $v0 filebufferstart
+
+readfile: #loads the file contents into the buffer
+li $v0 14
+lw $a0, filedescriptor
+lw $a1, filebufferstart
+li $a2, 100000
+syscall 
+sw $v0 sizeoffile
+
+printbuffer: #Prints the list of words in the puzzle
+#for debug only.
+li $v0 4
+lw $a0, filebufferstart
+syscall
+
+getinput:
+#Allocate buffer memory for input
+li $v0, 9
+li $a0, 10
+syscall
+sw $v0 inputbufferstart
+#get input, write it to buffer
+li $v0 8
+lw $a0 inputbufferstart
+li $a1 10
+syscall
+
+
+
+
+#checkMatch:
+#for (t0= 10, t0 < size of file; t0+= 10){
+#  for (t1 = 0; t1 < 10, t1 ++){
+#    if (input[t1] = 0x10 && file[t0 + t1] = {0x10 or 0x20}) j inlist;
+#    if (input[t1] != file[t0+t1] break;
+#  } 
+#}
+
+li $t0 0 #line counter. We will start checking at the second line (puzzle is on first line)
+#each line is 10 chars: The solution, padding spaces, and an 0x10 (LINEFEED) character.
+nextline: addi $t0, $t0, 10 
+lw $t2 sizeoffile
+slt $t3, $t0, $t2 # at end of list?
+beqz $t3 notInList #if so, search failed
+li $t1 0 #char counter
+j char
+#Skip incrementing before the first char of each line
+nextchar: addi $t1, $t1, 1
+char: #check one char at a time
+slti $t3, $t1, 10 #at end of line?
+beqz $t3 nextline #then try next line
+move $s0, $0
+lw $t6, inputbufferstart
+add $t6, $t6, $t1 #address of input char
+lbu $s0, ($t6) #input char is now in s0
+move $s1, $0
+lw $t6, filebufferstart
+add $t6, $t6, $t0 #ref line offset
+add $t6, $t6, $t1 #ref char offset
+lbu $s1, ($t6) #reference char is now in s1
+
+#check for end of input
+li $t2 0x20 #space character ######TODO: max length strings/ line ending
+bne $t2, $s1 check_match
+li $t2 10 #end of line character
+bne $t2, $s0 check_match
+j inList
+
+#check for matching character
+check_match:
+beq $s0, $s1 nextchar
+bne $s0, $s1 nextline
+
+#####################################################
+inList:#TODO: Check Input is duplicate
+li $v0 4
+la $a0, successmessage
+syscall
+j getinput
+
+notInList:
+li $v0 4
+la $a0, failmessage
+syscall
+
+j getinput
+
+escapeFound:
+#Branch to handle escape
+
+shuffle:
+#shuffle Puzzle
+jr $ra
+
+printSolutions:
+#Show all solutions to the puzzle
+jr $ra
+
+printPuzzle:
+#print puzzle
+jr $ra
+
+
+#######################################################################
+.data
+filename: .asciiz "words.txt"
+successmessage: .asciiz "Word is in puzzle\n"
+failmessage: .asciiz "Word is not in puzzle\n"
+
+inputbufferstart: .word 0
+
+filebufferstart: .word 0
+filedescriptor: .word 1
+sizeoffile: .word 0
