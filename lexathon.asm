@@ -286,19 +286,51 @@ successmessage: .asciiz " Word is in puzzle!\n"
 failmessage: .asciiz " Word is not in puzzle.\n"
 alreadyfoundmessage: .asciiz " Word already found!\n"
 
-
 inputbufferstart: .word 0
 
+#Some lines for the welcome message, and indications of displayed data - Alec
+welcome: .asciiz "Welcome to Lexathon, coded in MIPS Assembly Language!\n"
+welcome2: .asciiz "The instructions are simple, you will have 9 letters presented to you, and must make as many words as possible using the center letter.\n"
+welcome3: .asciiz "The following escape sequences will perform certain functions you might find useful:\n"
+welcome4: .asciiz "/s will shuffle the puzzle, leaving the center letter the same.\n"
+welcome5: .asciiz "/q will quit the game and print out the solutions to the puzzle.\n"
+welcome6: .asciiz "/n will generate a new puzzle without quitting the program, listing the previous puzzles solutions and printing the score.\n"
+welcome7: .asciiz "Have fun! :)\n\n"
 
+scoreIs: .asciiz "Your score is: " 
+quitting: .asciiz "Puzzle ended, we hope you had fun! Solutions are printed above.\n"
+
+newPuzzle: .asciiz "\nNow starting a new puzzle...\n\n"
+#
 .text
 listchecker:
 
 Message:
+#Output the welcome message
+li $v0, 4
+la $a0, welcome
+syscall
+la $a0, welcome2
+syscall
+la $a0, welcome3
+syscall
+la $a0, welcome4
+syscall
+la $a0, welcome5
+syscall
+la $a0, welcome6
+syscall
+la $a0, welcome7
+syscall
 #TODO: Print a welcome message
 
 #jal printSolutions
 #FOR DEBUG ONLY.
 #TODO: REMOVE THIS LINE BEFORE SUBMISSION
+
+#Reset the register that holds the score ($s7) to 0
+resetScore:
+move $s7, $0 
 
 createPuzzle:
 #create formatted string "keystring" for displaying puzzle
@@ -369,6 +401,8 @@ beq $s0, 83, shuffle
 beq $s0, 115, shuffle
 beq $s0, 81, quit
 beq $s0, 113, quit
+beq $s0, 'n', newGame
+beq $s0, 'N', newGame
 #TODO: Check if we have an excape character sequence.
 #If we do, jump to "escapeFound"
 
@@ -408,6 +442,7 @@ sb $t1, alreadyMatched($t0)
 li $v0 4
 la $a0, successmessage
 syscall #print the success message.
+addi $s7, $s7, 10 #We'll use register s7 to keep track of our score, and add 10 points only when we get an accepted word
 j getinput #return to the input loop
 
 #added "already used word" message - Salman
@@ -423,6 +458,22 @@ la $a0, failmessage
 syscall
 j getinput
 
+#Called when /n is entered to ask for a new puzzle - Alec
+newGame:
+#We want a new game, so print the solutions of the old game and then start a new one
+jal printSolutions
+li $v0, 4
+la $a0, quitting
+syscall
+la $a0, scoreIs
+syscall
+li $v0, 1
+move $a0, $s7 #Move the score into $a0, which is where the system expects the integer to be printed to be
+syscall
+li $v0, 4
+la $a0, newPuzzle
+syscall
+j selectKeyword #Select a different keyword for the generation of the new puzzle
 
 shuffle:
 # Appropriately shuffles all characters except middle character.
@@ -451,6 +502,14 @@ j displayPuzzle
 quit:
 #Handle a user's request to quit.
 jal printSolutions
+li $v0, 4
+la $a0, quitting
+syscall
+la $a0, scoreIs
+syscall
+li $v0, 1
+move $a0, $s7 #Move the score into a0, which is where the system expects the integer to be printed to be
+syscall
 li $v0 17
 li $a0 0
 syscall #Exit with code 0.
