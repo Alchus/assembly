@@ -156,7 +156,7 @@ lbu $t0, keyword($a0)
 lbu $t1, keyword+4
 sb $t0, keyword+4
 sb $t1, keyword($a0)
-
+ 
 
 #####
 #
@@ -274,7 +274,8 @@ sw $t9, matchesFound
 j nextline
 
 outofwords:
-nop #OUTOFWORDS
+lw $t0, welcomeDisplayed
+bnez $t0, resetScore #if welcome message has already been displayed once this run, skip it
 j listchecker
 
 #################################################################################
@@ -301,7 +302,9 @@ scoreIs: .asciiz "Your score is: "
 quitting: .asciiz "Puzzle ended, we hope you had fun! Solutions are printed above.\n"
 
 newPuzzle: .asciiz "\nNow starting a new puzzle...\n\n"
-#
+welcomeDisplayed: .word 0
+
+
 .text
 listchecker:
 
@@ -473,6 +476,20 @@ syscall
 li $v0, 4
 la $a0, newPuzzle
 syscall
+# skip welcome message next time 
+addi $t0, $zero, 1
+sw $t0, welcomeDisplayed
+#j selectKeyword # In essence, restart game
+
+## TRIED TO WRITE - evan
+# clear matches buffer out, but had no success.
+lw $t0, matchesFound
+mulu $t0, $t0, 10
+clearingLoop:
+addi $t0, $t0, -1
+sb $zero, matches($t0)
+bnez $t0, clearingLoop
+sw $zero, matchesFound
 j selectKeyword #Select a different keyword for the generation of the new puzzle
 
 shuffle:
