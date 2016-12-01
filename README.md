@@ -1,5 +1,5 @@
 # LEXATHON
-
+Write-up link: https://docs.google.com/document/d/1d2l02ZjEUeUFt0rfowimVAzxa-kF55X5B5CLItB40jE/edit?usp=sharing
 See issue tracker for things that need doing.
 
 
