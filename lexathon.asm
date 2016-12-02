@@ -354,7 +354,9 @@ sb $t3, keystring($t1)
 addi $t0, $t0, 1
 addi $t1, $t1, 2
 bne $t0, 9, keystringLoop
-j shuffle
+jal shuffle
+jal displayPuzzle
+j getinput
 
 displayPuzzle:
 #Print the characters of the puzzle in a 3-by-3 grid.
@@ -431,8 +433,8 @@ checkEscape:
 #Check if we have an excape character sequence.
 bne $s0, 47, continueMatching
 lbu $s0, 1($t6)
-beq $s0, 83, shuffle
-beq $s0, 115, shuffle
+beq $s0, 83, shuffling
+beq $s0, 115, shuffling
 beq $s0, 81, quit
 beq $s0, 113, quit
 beq $s0, 'n', newGame
@@ -552,6 +554,10 @@ sw $zero, matchesFound
 sw $zero, wordsLeft
 j selectKeyword #Select a different keyword for the generation of the new puzzle
 
+shuffling:
+jal shuffle
+j getinput
+
 shuffle:
 # Appropriately shuffles all characters except middle character.
 # Randomly swaps characters in the keystring, x times. 
@@ -573,7 +579,7 @@ sb $t2, keystring($t1)
 sb $t3, keystring($t0)
 addi $t4, $t4, 1
 bne $t4, 10, notFour1 # adjust this line to adjust # of swaps (currently 10)
-j getinput
+jr $ra
 
 quit:
 #Handle a user's request to quit.
