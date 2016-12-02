@@ -13,8 +13,11 @@ keyword: .asciiz "XXXXXXXXX"
 keystring: .asciiz "X X X\nX X X\nX X X\n"
 
 matchesFound: .word 0 #counts by 10
-matches: .space 20000
-alreadyMatched: .space 200
+matches: .space 500
+alreadyMatched: .space 500
+wordsLeft: .word 0
+
+
 
 #####################################################################################
 # INTRO SECTION (so user can see a welcome message while waiting for game to load!) #
@@ -271,6 +274,9 @@ bne $t8, $t9, copyloop
 lw $t9, matchesFound
 addi $t9, $t9, 10 #increment matchesfound
 sw $t9, matchesFound
+lw $t9, wordsLeft
+addi $t9, $t9, 1
+sw $t9, wordsLeft
 j nextline
 
 outofwords:
@@ -283,26 +289,34 @@ j listchecker
 #################################################################################
 .data
 filename: .asciiz "words.txt"
-successmessage: .asciiz " Word is in puzzle!\n"
-failmessage: .asciiz " Word is not in puzzle.\n"
-alreadyfoundmessage: .asciiz " Word already found!\n"
+inpt: .asciiz "\nYour word: "
+successmessage: .asciiz "\tWord is in puzzle!\n"
+failmessage: .asciiz "\tWord is not in puzzle.\n"
+alreadyfoundmessage: .asciiz "\tWord already found!\n"
 
 inputbufferstart: .word 0
 
 #Some lines for the welcome message, and indications of displayed data - Alec
-welcome: .asciiz "Welcome to Lexathon, coded in MIPS Assembly Language!\n"
+welcome:  .asciiz "Welcome to Lexathon, coded in MIPS Assembly Language!\n"
 welcome2: .asciiz "The instructions are simple, you will have 9 letters presented to you, and must make as many words as possible using the center letter.\n"
 welcome3: .asciiz "The following escape sequences will perform certain functions you might find useful:\n"
 welcome4: .asciiz "/s will shuffle the puzzle, leaving the center letter the same.\n"
 welcome5: .asciiz "/q will quit the game and print out the solutions to the puzzle.\n"
 welcome6: .asciiz "/n will generate a new puzzle without quitting the program, listing the previous puzzles solutions and printing the score.\n"
-welcome7: .asciiz "Have fun! :)\n\n"
+welcome7: .asciiz "Have fun! :)\n"
 
-scoreIs: .asciiz "Your score is: " 
-quitting: .asciiz "Puzzle ended, we hope you had fun! Solutions are printed above.\n"
+scoreIs:  .asciiz "Your score is: " 
+scoreIs2: .asciiz "\tScore: "
+score: .word 0
+words:    .asciiz "Words left: "
+quitting: .asciiz "Puzzle ended, we hope you had fun! Words not found are denoted with an asterisk *\n"
 
-newPuzzle: .asciiz "\nNow starting a new puzzle...\n\n"
+newPuzzle:     .asciiz "\nNow starting a new puzzle...\n\n"
+congratulate1: .asciiz "CONGRATULATIONS!!! You have found all of the words!\n"
+congratulate2: .asciiz "\n\tWould you like to play again? "
+playagain: .space 10
 welcomeDisplayed: .word 0
+
 
 
 .text
@@ -325,15 +339,10 @@ la $a0, welcome6
 syscall
 la $a0, welcome7
 syscall
-#TODO: Print a welcome message
 
-#jal printSolutions
-#FOR DEBUG ONLY.
-#TODO: REMOVE THIS LINE BEFORE SUBMISSION
-
-#Reset the register that holds the score ($s7) to 0
+#Reset the score
 resetScore:
-move $s7, $0 
+sw $zero, score
 
 createPuzzle:
 #create formatted string "keystring" for displaying puzzle
@@ -348,11 +357,14 @@ bne $t0, 9, keystringLoop
 j shuffle
 
 displayPuzzle:
-#TODO: Print the characters of the puzzle in a 3-by-3 grid.
-#The puzzle characters are found in the buffer labeled "keyword"
+#Print the characters of the puzzle in a 3-by-3 grid.
+li $v0, 11
+li $a0, '\n'
+syscall
 la $a0, keystring
 li $v0, 4
 syscall
+jr $ra
 
 getinput:
 #Allocate buffer memory for user input
@@ -361,6 +373,23 @@ li $a0, 10
 syscall
 sw $v0 inputbufferstart
 
+#print # words left and score
+li $v0, 4
+la $a0, words
+syscall
+lw $a0, wordsLeft
+li $v0, 1
+syscall
+li $v0, 4
+la $a0, scoreIs2
+syscall
+li $v0, 1
+lw $a0, score
+syscall
+#ask for input
+li $v0, 4
+la $a0, inpt
+syscall
 #get input, write it to buffer
 li $v0 8
 lw $a0 inputbufferstart
@@ -398,6 +427,7 @@ add $t6, $t6, $t1 #address of input char
 lbu $s0, ($t6) #input char is now in s0
 
 checkEscape:
+#Check if we have an excape character sequence.
 bne $s0, 47, continueMatching
 lbu $s0, 1($t6)
 beq $s0, 83, shuffle
@@ -406,8 +436,8 @@ beq $s0, 81, quit
 beq $s0, 113, quit
 beq $s0, 'n', newGame
 beq $s0, 'N', newGame
-#TODO: Check if we have an excape character sequence.
-#If we do, jump to "escapeFound"
+beq $s0, 'd', displayPuzzle
+beq $s0, 'D', displayPuzzle
 
 continueMatching:
 move $s1, $0
@@ -434,19 +464,30 @@ bne $s0, $s1 next_line
 #####################################################
 
 inList:
+jal displayPuzzle
 # Checks and records if a word has already been found or not. 
 # If it has already been found, prints according message.
+
+# load current word from match list
 divu $t0, $t0, 10
+lb $t2, alreadyMatched($t0) #current word matched
 li $t1, 1
-lb $t2, alreadyMatched($t0)
 bnez $t2, alreadyFound
 sb $t1, alreadyMatched($t0)
+# check if all words have been found
+lw $t2, wordsLeft
+beqz $t2, congrats
+addi $t2, $t2, -1
+sw $t2, wordsLeft
 
+success:
 li $v0 4
 la $a0, successmessage
 syscall #print the success message.
-addi $s7, $s7, 10 #We'll use register s7 to keep track of our score, and add 10 points only when we get an accepted word
-j getinput #return to the input loop
+lw $t0, score
+addi $t0, $t0, 10 # add 10 points only when we get an accepted word
+sw $t0, score
+j getinput # return to ask for input again
 
 #added "already used word" message - Salman
 alreadyFound:
@@ -461,6 +502,26 @@ la $a0, failmessage
 syscall
 j getinput
 
+# if user found all words, print summary congratulation message and ask if they would like to play again
+congrats:
+li $v0, 4
+la $a0, congratulate1
+syscall
+la $a0, scoreIs
+syscall
+li $v0, 1
+lw $a0, score #Move the score into a0, which is where the system expects the integer to be printed to be
+syscall
+li $v0, 4
+la $a0, congratulate2
+syscall
+li $v0, 12
+syscall
+beq $v0, 'y', newGame2
+beq $v0, 'Y', newGame2
+j quit
+
+
 #Called when /n is entered to ask for a new puzzle - Alec
 newGame:
 #We want a new game, so print the solutions of the old game and then start a new one
@@ -471,18 +532,18 @@ syscall
 la $a0, scoreIs
 syscall
 li $v0, 1
-move $a0, $s7 #Move the score into $a0, which is where the system expects the integer to be printed to be
+lw $a0, score #Move the score into $a0, which is where the system expects the integer to be printed to be
 syscall
 li $v0, 4
 la $a0, newPuzzle
 syscall
+newGame2:
 # skip welcome message next time 
 addi $t0, $zero, 1
 sw $t0, welcomeDisplayed
 #j selectKeyword # In essence, restart game
 
-## TRIED TO WRITE - evan
-# clear matches buffer out, but had no success.
+# clear matches buffer out
 lw $t0, matchesFound
 mulu $t0, $t0, 10
 clearingLoop:
@@ -490,6 +551,7 @@ addi $t0, $t0, -1
 sb $zero, matches($t0)
 bnez $t0, clearingLoop
 sw $zero, matchesFound
+sw $zero, wordsLeft
 j selectKeyword #Select a different keyword for the generation of the new puzzle
 
 shuffle:
@@ -513,8 +575,8 @@ sb $t2, keystring($t1)
 sb $t3, keystring($t0)
 addi $t4, $t4, 1
 bne $t4, 10, notFour1 # adjust this line to adjust # of swaps (currently 10)
-
-j displayPuzzle
+jal displayPuzzle
+j getinput
 
 quit:
 #Handle a user's request to quit.
@@ -525,18 +587,47 @@ syscall
 la $a0, scoreIs
 syscall
 li $v0, 1
-move $a0, $s7 #Move the score into a0, which is where the system expects the integer to be printed to be
+lw $a0, score #Move the score into a0, which is where the system expects the integer to be printed to be
 syscall
 li $v0 17
 li $a0 0
 syscall #Exit with code 0.
 
 
-printSolutions: #Prints the list of words in the puzzle
-li $v0 4
-la $a0, matches
+printSolutions: #Prints the list of words in the puzzle, with asterisks next to unfound words
+printLoop:
+li $t0, 0
+lw $t1, matchesFound
+divu $t1, $t1, 10
+matchingLoop:
+lb $t2, alreadyMatched($t0)
+bnez $t2, printSpace
+li $v0, 11
+li $a0, 42
 syscall
+printSpace:
+li $v0, 11
+li $a0, ' '
+syscall
+printWord:
+li $v0, 11
+li $a0, ' '
+syscall
+mul $t3, $t0, 10
+addi $t2, $t3, 10
+printWordLoop:
+lb $a0, matches($t3)
+syscall
+addi $t3, $t3, 1
+bne $t3, $t2, printWordLoop
+addi $t0, $t0, 1
+bne $t0, $t1, matchingLoop
 jr $ra
+
+#li $v0 4
+#la $a0, matches
+#syscall
+#jr $ra
 
 
 #######################################################################
