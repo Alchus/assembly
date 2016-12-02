@@ -13,8 +13,8 @@ keyword: .asciiz "XXXXXXXXX"
 keystring: .asciiz "X X X\nX X X\nX X X\n"
 
 matchesFound: .word 0 #counts by 10
-matches: .space 500
-alreadyMatched: .space 500
+matches: .space 20000
+alreadyMatched: .space 200
 wordsLeft: .word 0
 
 
@@ -309,7 +309,7 @@ scoreIs:  .asciiz "Your score is: "
 scoreIs2: .asciiz "\tScore: "
 score: .word 0
 words:    .asciiz "Words left: "
-quitting: .asciiz "Puzzle ended, we hope you had fun! Words not found are denoted with an asterisk *\n"
+quitting: .asciiz "Puzzle ended, we hope you had fun! Solutions displayed above (* Words not found).\n"
 
 newPuzzle:     .asciiz "\nNow starting a new puzzle...\n\n"
 congratulate1: .asciiz "CONGRATULATIONS!!! You have found all of the words!\n"
@@ -396,6 +396,7 @@ lw $a0 inputbufferstart
 li $a1 10
 syscall
 
+jal displayPuzzle
 
 #pseudocode for checkMatch:
 #for (t0= 10, t0 < size of file; t0+= 10){
@@ -464,10 +465,9 @@ bne $s0, $s1 next_line
 #####################################################
 
 inList:
-jal displayPuzzle
 # Checks and records if a word has already been found or not. 
 # If it has already been found, prints according message.
-
+#jal displayPuzzle
 # load current word from match list
 divu $t0, $t0, 10
 lb $t2, alreadyMatched($t0) #current word matched
@@ -594,8 +594,13 @@ li $a0 0
 syscall #Exit with code 0.
 
 
-printSolutions: #Prints the list of words in the puzzle, with asterisks next to unfound words
-printLoop:
+printSolutions: 
+#li $v0 4
+#la $a0, matches
+#syscall
+#jr $ra
+
+#Prints the list of words in the puzzle, with asterisks next to unfound words
 li $t0, 0
 lw $t1, matchesFound
 divu $t1, $t1, 10
@@ -623,11 +628,6 @@ bne $t3, $t2, printWordLoop
 addi $t0, $t0, 1
 bne $t0, $t1, matchingLoop
 jr $ra
-
-#li $v0 4
-#la $a0, matches
-#syscall
-#jr $ra
 
 
 #######################################################################
