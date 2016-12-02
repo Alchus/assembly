@@ -437,8 +437,6 @@ beq $s0, 81, quit
 beq $s0, 113, quit
 beq $s0, 'n', newGame
 beq $s0, 'N', newGame
-beq $s0, 'd', displayPuzzle
-beq $s0, 'D', displayPuzzle
 
 continueMatching:
 move $s1, $0
