@@ -14,7 +14,7 @@ keystring: .asciiz "X X X\nX X X\nX X X\n"
 
 matchesFound: .word 0 #counts by 10
 matches: .space 20000
-alreadyMatched: .space 200
+alreadyMatched: .space 2000
 wordsLeft: .word 0
 
 
@@ -545,6 +545,7 @@ sw $t0, welcomeDisplayed
 
 # clear matches buffer out
 lw $t0, matchesFound
+move $t1, $t0
 mulu $t0, $t0, 10
 clearingLoop:
 addi $t0, $t0, -1
@@ -552,6 +553,11 @@ sb $zero, matches($t0)
 bnez $t0, clearingLoop
 sw $zero, matchesFound
 sw $zero, wordsLeft
+
+clearing2Loop:
+addi $t1, $t1, -1
+sb $zero, alreadyMatched($t1)
+bnez $t1, clearing2Loop
 j selectKeyword #Select a different keyword for the generation of the new puzzle
 
 shuffling:
