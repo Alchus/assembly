@@ -575,7 +575,6 @@ sb $t2, keystring($t1)
 sb $t3, keystring($t0)
 addi $t4, $t4, 1
 bne $t4, 10, notFour1 # adjust this line to adjust # of swaps (currently 10)
-jal displayPuzzle
 j getinput
 
 quit:
